@@ -794,6 +794,13 @@ func (e *endpoint) forwardPacketWithRoute(route *stack.Route, pkt *stack.PacketB
 		}
 	}
 
+	// Read the TTL before the deep copy: DeepCopyForForwarding can
+	// copy-on-write the source packet's header view (PullUp on a shared
+	// chunk) and release the chunk h points into, so h must not be read
+	// after it. IPv6 reads the hop limit before the copy for the same
+	// reason.
+	ttl := h.TTL()
+
 	// We need to do a deep copy of the IP packet because
 	// WriteHeaderIncludedPacket may modify the packet buffer, but we do
 	// not own it.
@@ -815,7 +822,6 @@ func (e *endpoint) forwardPacketWithRoute(route *stack.Route, pkt *stack.PacketB
 		}
 	}
 
-	ttl := h.TTL()
 	// As per RFC 791 page 30, Time to Live,
 	//
 	//   This field must be decreased at each point that the internet header
